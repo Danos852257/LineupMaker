@@ -12,9 +12,9 @@ Answer these questions: What is your project? Why'd you build it?
  
  <h3>Sprint Goal</h3>
 <strong></strong><br/>
-1. Debug the infinite loop (very annoying)     
-2. Add restrictions including choose swimmer (manually place swimmer in event), prevent swimmer (block from putting in specific event), remove swimmer(entirely prevent from participating. This is last priority because this can be done manually by removing the swimmer from spreadsheet if necesary)     
-3. Remove any bugs that are remaining    
+1. Debug the infinite loop (very annoying) <br/>    
+2. Add restrictions including choose swimmer (manually place swimmer in event), prevent swimmer (block from putting in specific event), remove swimmer(entirely prevent from participating. This is last priority because this can be done manually by removing the swimmer from spreadsheet if necesary)<br/>     
+3. Remove any bugs that are remaining  <br/>  
 
 <h2>Key learnings</h2>
 <strong>FILL THIS IN</strong><br/>
