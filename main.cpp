@@ -21,6 +21,7 @@ eventNames and eN are not modified in the program ever. They would need to be ch
 const int prtcp = 3; 
 const int eN = 8; 
 bool shouldExit = false;
+const int maxEventsAllowed = 2; //maximum events that a swimmer is allowed to be in
 
 class Swimmer{ //stores data about each swimmer, which will be imported from the excel file
     public:
@@ -39,18 +40,20 @@ class Swimmer{ //stores data about each swimmer, which will be imported from the
 
         //default swimmer to be replaced (trust me its necessary)
         Swimmer(int tra, int sh){
+            name = "trashswimmerplaceholder";
             isTrash = true;
         }
 };
 
 std::vector<Swimmer> swimmers; //list of the swimmers and times from the excel
+std::array<Swimmer, eN> fastestSwimmers; //list of swimmers with fastest time in each event.
+std::vector<std::vector<Swimmer>> sortedSwimmers; //vector storing swimmers sorted for each event
 std::string eventNames[] = {"50 Free", "100 Free", "200 Free", "500 Free", "100 Back", "100 Breaststroke", "100 Fly", "200 IM"};
 /*
 Events are in this order on the spreadsheet:
 50fr, 100 fr, 200fr, 500fr, 100bk, 100br, 100fl, 200IM
 */
 
-std::vector<std::vector<Swimmer>> sortedSwimmers;
 
 
 int helperInt = 0;//makes it easier to specify the event when comparing for sorting
@@ -78,8 +81,53 @@ void sortParticipants() {
         std::sort(sortedSwimmers[k].begin(), sortedSwimmers[k].end(), compareByTimes);
         
     }
-    
 }
+
+//find fastest swimmer in each event and populate fastestSwimmers
+void findFastestTimes(){
+    Swimmer key;
+    for(int k = 0; k< eN; k++){ //loop through each event
+        std::vector<Swimmer> temp;
+        for(int j = 0; j< swimmers.size(); j++){
+            if(swimmers[j].times[k]>=0){
+                temp.push_back(swimmers[j]);
+            }
+        }
+        if(temp.size() == 0){
+            continue;
+        }
+        else if (temp.size() == 1){
+            fastestSwimmers[k] = (temp[0]);
+            continue;
+        }
+        key = temp[0];
+        for(int i = 1; i< temp.size(); i++){
+            if(temp[i].times[k]<key.times[k]){
+                key = temp[i];
+            }
+        }
+        fastestSwimmers[k] = (key);
+    }
+}
+
+//normalizes the times to make the more comparable
+//divides the swimmer's time by the best time in the set to determine the normalTime
+void normalizeTimes() {
+    findFastestTimes();
+    for (int i = 0; i < swimmers.size(); i++) {
+        for (int j = 0; j < eN; j++) {
+            //set normalTimes to -1 if time is -1 (doesn't exist)
+            if (swimmers[i].times[j] == -1) {
+                swimmers[i].normalTimes[j] = -1;
+            }
+            else {
+                //find the normalTime if it exists
+                swimmers[i].normalTimes[j] = ((swimmers[i].times[j] / fastestSwimmers[j].times[j]));
+            }
+        }
+    }
+}
+
 
 //Stores data about each individual event, of which there are 8 in a Lineup
 class Event{
@@ -92,6 +140,7 @@ class Event{
 
         //adds best swimmers to event
         void populateEvent(){
+            //make sure the event is not completely full
             bool temp = false;
             for(int y = 0; y<prtcp; y++){
                 if(participants[y].isTrash){
@@ -101,9 +150,11 @@ class Event{
             if(!temp){
                 return;
             }
+
+
             int i = 0;
-            while(participants.size()<prtcp && i<sortedSwimmers[eventNo].size()){ 
-                if(sortedSwimmers[eventNo][i].eventsIn<2){
+            while(i<sortedSwimmers[eventNo].size()){ 
+                if(sortedSwimmers[eventNo][i].eventsIn<maxEventsAllowed){
                     for(int c = 0; c<prtcp; c++){
                         if(participants[c].isTrash){
                             participants[c] = (sortedSwimmers[eventNo][i]);
@@ -114,12 +165,21 @@ class Event{
                 }
                 i++;
             }
+
             //adds 1 to eventsIn for each swimmer to ensure they are not placed in other events
             for (int k = 0; k < participants.size(); k++) {
-                for (int j = 0; j < sortedSwimmers[eventNo].size(); j++) {
-                    if (sortedSwimmers[eventNo][j].name == participants[k].name) {
-                        sortedSwimmers[eventNo][j].eventsIn++;
+                for(int u = 0; u < swimmers.size(); u++){
+                    if(swimmers[u].name == participants[k].name){
+                        swimmers[u].eventsIn++;
                         break;
+                    }
+                }
+                for(int l = 0; l<sortedSwimmers.size(); l++){
+                    for (int j = 0; j < sortedSwimmers[l].size(); j++) {
+                        if (sortedSwimmers[l][j].name == participants[k].name) {
+                            sortedSwimmers[l][j].eventsIn++;
+                            break;
+                        }
                     }
                 }
             }
@@ -128,20 +188,12 @@ class Event{
         //fills event with default stuff
         fillEventWithTrash(){
             Swimmer trashSwimmer(0, 0);
-            int i;
-            while(participants.size()<prtcp){
+            int i = 0;
+            while(i<prtcp){
                 participants[i] = (trashSwimmer);
                 i++;
             }
         }
-
-        //fills event with best possible swimmers, ignoring legality
-        /*createBaselineEvent(){
-            for(int j = 0; j<prtcp; j++){ 
-                participants.push_back(sortedSwimmers[eventNo][j]);
-                
-            }
-        }*/
 };
 
 
@@ -155,6 +207,7 @@ class Lineup{
         bool isTrash; //not useful in actual lineups, only for placeholders
         Lineup(){
             isTrash = false;
+            fillWithTrash();
         }
 
 
@@ -164,10 +217,10 @@ class Lineup{
         }
         //creates 8 events
         createLineup(){
-            for(int i = 0; i<eN; i++){
-                Event event(i);
+            for(int k = 0; k<eN; k++){
+                Event event(k);
                 events.push_back(event);
-                events[i].populateEvent();
+                events[k].populateEvent();
             }
         }
         //fills lineup with default swimmers 
@@ -176,22 +229,13 @@ class Lineup{
                 Event event(k);
                 events.push_back(event);
                 events[k].fillEventWithTrash();
+
             }
         }
-        //creates 8 events ignoring legality
-        /*createBaseLineup(){
-            int i = 0;
-            while(i<eN){
-                Event event(i);
-                events.push_back(event);
-                events[i].createBaselineEvent();
-                i++;
-            }
-        }*/
         //scores the value of the lineup to be compared with others based on normalTimes of swimmers
         void calculateScore(){
             double ret =0.0;
-            for(int i = 0; i< events.size(); i++){
+            for(int i = 0; i< eN; i++){
                 for (int j = 0; j< events[j].participants.size(); j++){
                     ret = ret + (events[i].participants[j].normalTimes[i]);
                 }
@@ -311,60 +355,6 @@ void printEvents(Lineup lineup){
     std::cout << " " << std::endl;
 }
 
-std::array<Swimmer, eN> fastestSwimmers;
-//find fastest swimmer in each event and populate fastestSwimmers
-void findFastestTimes(){
-    Swimmer key;
-    for(int k = 0; k< eN; k++){ //loop through each event
-        std::vector<Swimmer> temp;
-        for(int j = 0; j< swimmers.size(); j++){
-            if(swimmers[j].times[k]>=0){
-                temp.push_back(swimmers[j]);
-            }
-        }
-        if(temp.size() == 0){
-            continue;
-        }
-        else if (temp.size() == 1){
-            fastestSwimmers[k] = (temp[0]);
-            continue;
-        }
-        key = temp[0];
-        for(int i = 1; i< temp.size(); i++){
-            if(temp[i].times[k]<key.times[k]){
-                key = temp[i];
-            }
-        }
-        fastestSwimmers[k] = (key);
-    }
-}
-
-//normalizes the times to make the more comparable
-//divides the swimmer's time by the best time in the set to determine the normalTime
-void normalizeTimes() {
-    findFastestTimes();
-    for (int i = 0; i < swimmers.size(); i++) {
-        for (int j = 0; j < eN; j++) {
-            //set normalTimes to -1 if time is -1 (doesn't exist)
-            if (swimmers[i].times[j] == -1) {
-                swimmers[i].normalTimes[j] = -1;
-            }
-            else {
-                //find the normalTime if it exists
-                swimmers[i].normalTimes[j] = ((swimmers[i].times[j] / fastestSwimmers[j].times[j]));
-            }
-        }
-    }
-}
-
-
-
-//Reset the events each swimmer is in, setting their eventsIn to 0
-void resetSwimmers(){
-    for(int i = 0; i<swimmers.size(); i++){
-        swimmers[i].eventsIn = 0;
-    }
-}
 
 //self explanitory if you don't understand what this does based on the name I don't have anything to say to you
 void printNormalTimes(){
@@ -378,6 +368,13 @@ void printNormalTimes(){
         std::cout<<std::endl;
     }
 }
+
+
+
+
+
+
+
 
 
 
@@ -402,8 +399,9 @@ void printSwimmers(){
 
 //Main option 3- prints out the values in all stored lineups
 void printLineupsHelper(){
-    if(lineups.size()<1){
-        std::cout<<"No lineups to print"<<std::endl;;
+    if(lineups.size()<1){ //checks to see if there are any lineups in the vector
+        std::cout<<"No lineups to print"<<std::endl;
+        std::cout<<""<<std::endl;
         return;
     }
     for(int i = 0; i<lineups.size(); i++){
@@ -411,6 +409,7 @@ void printLineupsHelper(){
         std::cout<<lineups[i].name<<std::endl;
         printEvents(lineups[i]);
         std::cout<<""<<std::endl;
+        std::cout<<"Lineup Score: "<<lineups[i].score<<std::endl;
         std::cout<<""<<std::endl;
     }
     std::cout<<"--------------------------------------"<<std::endl;
@@ -423,7 +422,8 @@ Main option 2 (creating lineups) is big so it gets a big section
 //print statements for options menu for building a lineup
 
 //Build Option 1: add a swimmer to an event
-void manualAdd(Lineup lineup){
+Lineup manualAdd(Lineup lineup1){
+    Lineup lineup = lineup1;
     std::cout<<"Select a swimmer to add to an event, and choose that swimmer's index"<<std::endl;
     int a;
     int b;
@@ -434,13 +434,12 @@ void manualAdd(Lineup lineup){
         //input the index of removed swimmer
         std::cin >> ans0; 
         if(ans0 == "q"){
-            return;
+            return lineup1;
         }
         try{
             a = stoi(ans0); //convert inputted string to integer
-            break;
         }
-        catch(int fillerfillerfillerfillerfiller){
+        catch(const std::invalid_argument&){
             std::cout<<"Invalid Input. Please try again: "<<std::endl;
             continue;
         }
@@ -454,46 +453,58 @@ void manualAdd(Lineup lineup){
             std::cout<<"Number is too big. Please try again: "<<std::endl;
             continue;
         }
+        break;
     }
 
     //check if swimmer has maxed out events
-    if(swimmers[a-1].eventsIn>=2){
-        std::cout<<"Swimmer is already in 2 events"<<std::endl;
-        return;
+    if(swimmers[a-1].eventsIn>=maxEventsAllowed){
+        std::cout<<"Swimmer is already in "<<maxEventsAllowed<<" events"<<std::endl;
+        return lineup1;
     }
+
+
+
 
     std::cout<<"Which event number would you like the assign?"<<std::endl;
     while(true){
-        //input the index of removed swimmer
+        //input the index of swimmer
         std::cin >> ans1; 
         if(ans0 == "q"){
-            return;
+            return lineup1;
         }
         try{
-            a = stoi(ans1); //convert inputted string to integer
-            break;
+            b = stoi(ans1); //convert inputted string to integer
         }
-        catch(int fillerint){
+        catch(const std::invalid_argument&){
             std::cout<<"Invalid Input. Please try again: "<<std::endl;
             continue;
         }
 
         //check to make sure the index fits the vector size
-        if(a<1){
+        if(b<1){
             std::cout<<"Number is too small. Please try again: "<<std::endl;
             continue;
         }
-        if(a>eN){
+        if(b>eN){
             std::cout<<"Number is too big. Please try again: "<<std::endl;
             continue;
         }
+        break;
     }
+
+    //check if swimmer is already in the event
+    for(int i = 0; i<prtcp; i++){
+        if(swimmers[a-1].name == lineup.events[b-1].participants[i].name){
+            std::cout<<"Swimmer is already in this event."<<std::endl;
+            return lineup1;
+        }
+    }
+
 
     //assign the swimmer to the event and make sure it is not already full
     for(int i = 0; i<prtcp; i++){
         if(lineup.events[b-1].participants[i].isTrash){
             lineup.events[b-1].participants[i] = swimmers[a-1];//subtract 1 because user list starts at 1 but computer list starts at 0
-            
             //add to eventsIn for the swimmer
             std::string tempName = swimmers[a-1].name;
             swimmers[a-1].eventsIn++;
@@ -506,21 +517,18 @@ void manualAdd(Lineup lineup){
                     }
                 }
             }
-            return;
+            return lineup;
         }
     }
     std::cout<<"Event is already full. Please choose a different event"<<std::endl;
+    return lineup1;
+
 
 
 }
 
-//Build Option 2: prevent a swimmer from being in an event
-void preventSwimmer(Lineup lineup){
-    std::cout<<"Sorry this doesn't work yet"<<std::endl;
-    return;
-}
 
-//Build Option 4: Erase the previously added constraints
+//Build Option 3: Erase the previously added constraints
 void eraseConstraints(){
     //reset eventsIn in swimmers vector
     for(int i = 0; i<swimmers.size(); i++){
@@ -538,9 +546,8 @@ void lineupBuildOptions(){
     std::cout<<""<<std::endl;
     std::cout<<"Options: "<<std::endl;
     std::cout<<"1. Manually add a swimmer to an event"<<std::endl;
-    std::cout<<"2. Prevent a swimmer from swimming a certain event"<<std::endl;
-    std::cout<<"3. Finish building lineup based on current parameters"<<std::endl;
-    std::cout<<"4. Quit lineup building and erase constraints" << std::endl; //done!
+    std::cout<<"2. Finish building lineup based on current parameters"<<std::endl;
+    std::cout<<"3. Quit lineup building and erase constraints" << std::endl; //done!
     std::cout<<""<<std::endl;
 }
 
@@ -552,20 +559,16 @@ Lineup creationUserInput(Lineup lineup){
         std::cin>> ans;
         if(ans == "1"){
             //manually add swimmer
-            manualAdd(lineup);
-            break;
+            lineup = manualAdd(lineup);
         }
         else if (ans == "2"){
-            //block a swimmer from swimming an event
-            preventSwimmer(lineup);
-            break;
-        }
-        else if (ans == "3"){
             //finish building the lineup
             lineup.createLineup();
+            lineup.calculateScore();
+            eraseConstraints();
             return lineup;
         }
-        else if (ans == "4"){
+        else if (ans == "3" || ans == "q"){
             //quit and destroy constraints
             eraseConstraints();
             Lineup lineup(0, 0); //creates a placeholder so it is not added to the lineups vector
@@ -581,40 +584,35 @@ Lineup creationUserInput(Lineup lineup){
 }
 
 //Main option 2- called when the user chooses to build a new lineup
-void userCreateLineup(){
+Lineup userCreateLineup(){
     Lineup lineup; //lineup constructor
 
     //name the lineup
     std::cout<<"Name your lineup"<<std::endl;
     std::string ans1;
     std::cin >> ans1;
+    lineup.name = ans1;
 
     //this is where majority of lineup building happens
     lineup = creationUserInput(lineup);
     lineup.name = ans1;
-    if(lineup.isTrash){
-        return;
+    bool tempBool = lineup.isTrash;
+    if(tempBool){
     }
     else{
         lineups.push_back(lineup);
-        return;
     }
-
+    return lineup;
 }
 
 //helper method to actually remove the swimmer
 void removeSwimmerHelper(int a){
     std::string tempName = swimmers[a].name;
-    std::cout<<"11111111111"<<std::endl;
     swimmers.erase(swimmers.begin()+a);
-    std::cout<<"2222222222222222"<<std::endl;
     //loop through each array in the 2d array sortedSwimmers and remove the swimmer from each one
     for(int k = 0; k< eN; k++){
-        std::cout<<"33333333333333333"<<std::endl;
         for(int i = 0; i<sortedSwimmers[k].size(); i++){
-            std::cout<<"4444444444444444444"<<std::endl;
             if(sortedSwimmers[k][i].name == tempName){
-                std::cout<<"55555555555555"<<std::endl;
                 sortedSwimmers[k].erase(sortedSwimmers[k].begin()+i);
                 break;
             }
@@ -650,6 +648,20 @@ void removeSwimmer(){
     //must subtract 1 because inputted number is from a list starting at 1 while the vectors it will be used in start at 0
     removeSwimmerHelper(a-1);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -693,6 +705,7 @@ void mainUserInput(){
         else if (ans == "4"){
             //remove a swimmer
             removeSwimmer();
+            break;
         }
         else if (ans == "5" || ans == "q" || ans == "Q"){
             //quit
@@ -711,7 +724,7 @@ void run(){
     /*
     set up infrastructure before user interactions
     */
-    std::ifstream csvFile("Top_times_4_17_22.csv"); //MODIFY THIS TO DETERMINE WHICH FILE YOU ARE USING!!!!!!
+    std::ifstream csvFile("SwimmerTimes.csv"); //MODIFY THIS TO DETERMINE WHICH FILE YOU ARE USING!!!!!!
     //import data from the file
     importFile(csvFile);
     std::cout<<""<<std::endl;
@@ -733,11 +746,9 @@ void run(){
         std::cout<<"Choose an option: ";
         mainUserInput();
         if(shouldExit){
-            return;
+            break;
         }
     }
-
-
 
 }
 
@@ -745,6 +756,9 @@ void run(){
 int main(){
     run();
 
+    // Clear the input buffer before waiting for user input
+    std::cin.clear();
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     //This part exists to that the window does not close automatically when you are done.
     std::cout << "Press Enter to quit and close the window" << std::endl;
     std::cin.get();
