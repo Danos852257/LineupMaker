@@ -3,11 +3,12 @@
 <br/>
 
 <h2>About</h2>
-<strong>Allows the user to create multiple lineups and compare them to determine which is the strongest and will score the most points. It is for swim meets (specifically high school meets), allowing you to manually assign some swimmers and automatically assign others. The program is based on a few values that are important for it to work. First, there is a global variable called eN which is set to 8, as this is the amount of individual events at a meet. This would never need to be changed unless the meet had different events. However, that has never happened to me so I just set it as 8. Similarly, the variable prtcp (short for participants) is set to 3, as that is the maximum amount of swimmers you can add to an event. The events that I included are listed at the top of the source code in main.cpp. When you run the program, you will be prompted with a number of options that allow you to build a lineup and figure out which is best. Once the lineup is built, it will be given a score, which can be compared to other lineups you build.</strong><br/>
+<strong>Allows the user to create multiple lineups and compare them to determine which is the strongest and will score the most points. It is for swim meets (specifically high school meets), allowing you to manually assign some swimmers and automatically assign others.<br/> 
+The program is based on a few values that are important for it to work. First, there is a global variable called eN which is set to 8, as this is the amount of individual events at a meet. This would never need to be changed unless the meet had different events. However, that has never happened to me so I just set it as 8. Similarly, the variable prtcp (short for participants) is set to 3, as that is the maximum amount of swimmers you can add to an event. Same with maxEventsAllowed (set to 2)<br/>
+The events that I included are listed at the top of the source code in main.cpp. When you run the program, you will be prompted with a number of options that allow you to build a lineup and figure out which is best. Once the lineup is built, it will be given a score, which can be compared to other lineups you build.</strong><br/>
 
 
 <h2>Goal and requirements</h2>
- Summarize your goals, non-goals, and project requirements from your design doc. Make sure to link your design doc here as well.
  DESIGN DOC: https://docs.google.com/document/d/16pJ8yu7457kh0xkWjlEdQsvarU4t2Rwh1TBplXZ-m9U/edit?usp=sharing <br/>
  The goals and non-goals are listed in this doc, but to summarize, my intial goals were to allow the user to create for a swim meet, follow the constraints (listed in the design doc), and also just learn c++ because I did not know if before doing this project.<br/>
  I decided not to include relays because they would be very difficult to implement in the program and are super easy to set up manually anyway because swimmers can swim more of them compared to individual events.<br/>
