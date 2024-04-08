@@ -432,6 +432,7 @@ Lineup manualAdd(Lineup lineup1){
     //get the input for swimmer index
     while(true){
         //input the index of removed swimmer
+        std::cin.clear();
         std::cin >> ans0; 
         if(ans0 == "q"){
             return lineup1;
@@ -468,6 +469,7 @@ Lineup manualAdd(Lineup lineup1){
     std::cout<<"Which event number would you like the assign?"<<std::endl;
     while(true){
         //input the index of swimmer
+        std::cin.clear();
         std::cin >> ans1; 
         if(ans0 == "q"){
             return lineup1;
@@ -522,9 +524,6 @@ Lineup manualAdd(Lineup lineup1){
     }
     std::cout<<"Event is already full. Please choose a different event"<<std::endl;
     return lineup1;
-
-
-
 }
 
 
@@ -630,7 +629,7 @@ void removeSwimmer(){
     try{
         a = stoi(u); //convert inputted string to integer
     }
-    catch(int e){
+    catch(const std::invalid_argument&){
         std::cout<<"Invalid Input. Please try again"<<std::endl;
         return;
     }
@@ -673,6 +672,7 @@ Main User functions
 */
 //print user options
 void printOptions(){
+    std::cout<<""<<std::endl;
     std::cout<<"Options"<<std::endl;
     std::cout<<"1. List the swimmers and their indexes"<<std::endl; //done!
     std::cout<<"2. Create new lineup"<<std::endl;
